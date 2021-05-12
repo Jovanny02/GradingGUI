@@ -1,5 +1,6 @@
 from tkinter import filedialog
 from pathlib import Path
+from helpers import refreshTBs
 import os
 import shutil
 
@@ -53,6 +54,8 @@ def uploadVHDFile(self):
         tf.close()
         self.tbUploadVar.set("An Error Occurred")
         self.tbUploadLabel['fg'] = "red"
+
+    refreshTBs(self)
 
 
 def uploadTextFile(self):

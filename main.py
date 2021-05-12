@@ -1,3 +1,4 @@
+import signal
 from tkinter import *
 from tkinter.scrolledtext import ScrolledText
 from tkinter.ttk import Combobox
@@ -5,6 +6,7 @@ from tkinter.ttk import Combobox
 from OpenFiles import *
 from functools import partial
 from helpers import *
+from signal import SIGTERM
 from os import *
 
 __author__ = "Jovanny Vera"
@@ -19,19 +21,27 @@ class Application(Tk):
         self.rightFrame = None
         self.uploadFileFrame = None
         self.generateNewRunFrame = None
+        self.subProcess = None
+        self.terminalScrolledText = None
+        self.exitFlag = False
+        self.runThread = None
+        self.runAllThread = None
+        self.currentProject = None
+
+
 
         self.createLayout()
         self.createUploadFiles()
         self.createNewRun()
-        self.createRunFrame()
         self.createScrollWindow()
+        self.createRunFrame()
         # Load Runs
         loadRuns(self)
 
     def createLayout(self):
         # create two columns
         self.grid_columnconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=1)
+        self.grid_columnconfigure(1, weight=5)
         self.grid_rowconfigure(0, weight=1)
 
         # create left column
@@ -95,7 +105,7 @@ class Application(Tk):
         self.generateNewRunFrame.grid(row=1, column=0, sticky="NSEW", padx=5, pady=5)
 
         # Title label
-        uploadFileTitle = Label(self.generateNewRunFrame, text="Generate New Run", font=("TkDefaultFont", 18))
+        uploadFileTitle = Label(self.generateNewRunFrame, text="Create Grading Project", font=("TkDefaultFont", 18))
         uploadFileTitle.grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=W)
 
         # choose TCL
@@ -117,15 +127,19 @@ class Application(Tk):
         self.zipVar = StringVar(self.generateNewRunFrame)
         self.zipLabel = Label(self.generateNewRunFrame, text="")
         self.zipLabel.grid(row=3, column=1, sticky=W)
-        tclButton = Button(self.generateNewRunFrame, text="Choose Zip File", command=partial(uploadZipFile, self))
-        tclButton.grid(row=3, column=0, sticky=W, padx=5, pady=5)
+        zipButton = Button(self.generateNewRunFrame, text="Choose Zip File", command=partial(uploadZipFile, self))
+        zipButton.grid(row=3, column=0, sticky=W, padx=5, pady=5)
+
+        self.deleteZipVal = IntVar()
+        self.zipCheckBox = Checkbutton(self.generateNewRunFrame, variable=self.deleteZipVal, text="delete zip")
+        self.zipCheckBox.grid(row=3, column=2, sticky="NSEW", padx=5, pady=5)
 
         # testbench label
         chooseTbLabel = Label(self.generateNewRunFrame, text="Choose Testbenches", font=("TkDefaultFont", 12))
         chooseTbLabel.grid(row=4, column=0, columnspan=2, padx=5, sticky=W)
 
         refreshButton = Button(self.generateNewRunFrame, text="Refresh TBs", command=partial(refreshTBs, self))
-        refreshButton.grid(row=4, column=3, padx=5, sticky="NSEW")
+        refreshButton.grid(row=4, column=2, padx=5, sticky="NSEW")
         # choose testbenches
         listFrame = Frame(self.generateNewRunFrame, highlightthickness=1, highlightbackground="black")
         listFrame.grid(row=5, column=0, columnspan=2, sticky="NSEW", padx=5, pady=5)
@@ -138,14 +152,14 @@ class Application(Tk):
         refreshTBs(self)
 
         # choose generated name
-        generationLabel = Label(self.generateNewRunFrame, text="Generation Name: ").grid(row=6, column=0, sticky=W)
+        generationLabel = Label(self.generateNewRunFrame, text="Grading Project Name: ").grid(row=6, column=0, sticky=W)
         self.generationEntry = Entry(self.generateNewRunFrame, highlightthickness=1, highlightbackground="black")
         self.generationEntry.grid(row=6, column=1, sticky=W, padx=5, pady=5)
 
         # choose generated name
-        generateButton = Button(self.generateNewRunFrame, text="Generate",
+        generateButton = Button(self.generateNewRunFrame, text="Create",
                                 command=partial(generateRun, self))
-        generateButton.grid(row=6, column=3, sticky="NSEW", padx=5, pady=5)
+        generateButton.grid(row=6, column=2, sticky="NSEW", padx=5, pady=5)
 
         # error label
         self.errorLabel = Label(self.generateNewRunFrame, text="", fg="red")
@@ -155,13 +169,13 @@ class Application(Tk):
         runFrame = Frame(self.rightFrame, highlightthickness=1, highlightbackground="black")
         runFrame.grid(row=0, column=0, sticky="NSEW", padx=5, pady=5)
 
-        runTitle = Label(runFrame, text="Run", font=("TkDefaultFont", 18))
+        runTitle = Label(runFrame, text="Run Grading Project", font=("TkDefaultFont", 18))
         runTitle.grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=W)
 
         # select run comboBox and button
         self.runComboBox = Combobox(runFrame)
         self.runComboBox.grid(row=1, column=0, sticky="NSEW", padx=5, pady=5)
-        self.runComboBox.set('Choose Run')
+        self.runComboBox.set('Choose Grading Project')
         loadButton = Button(runFrame, text="Load", command=partial(loadStudents, self))
         loadButton.grid(row=1, column=1, sticky="NSEW", padx=5, pady=5)
 
@@ -175,18 +189,21 @@ class Application(Tk):
         runButton = Button(runFrame, text="Run", command=partial(runStudent, self))
         runButton.grid(row=2, column=1, sticky="NSEW", padx=5, pady=5)
 
-        runButton = Button(runFrame, text="Run Next", command=partial(runStudent, self))
+        runButton = Button(runFrame, text="Run Next", command=partial(runNextStudent, self))
         runButton.grid(row=2, column=2, sticky="NSEW", padx=5, pady=5)
 
-        runButton = Button(runFrame, text="Run All", command=partial(runStudent, self))
+        runButton = Button(runFrame, text="Run All", command=partial(runAllStudents, self))
         runButton.grid(row=2, column=3, sticky="NSEW", padx=5, pady=5)
 
-        clearWindowButton = Button(runFrame, text="Clear Text", command=partial(clearWindowText, self))
+        clearWindowButton = Button(runFrame, text="Clear Window", command=partial(clearWindowText, self.terminalScrolledText))
         clearWindowButton.grid(row=2, column=4, sticky="NSEW", padx=5, pady=5)
+
+        quitWindowButton = Button(runFrame, text="Stop", command=partial(stopRunning, self))
+        quitWindowButton.grid(row=2, column=5, sticky="NSEW", padx=5, pady=5)
 
         self.guiCheckBoxVal = IntVar()
         self.guiCheckBox = Checkbutton(runFrame, variable=self.guiCheckBoxVal, text="gui")
-        self.guiCheckBox.grid(row=2, column=5, sticky="NSEW", padx=5, pady=5)
+        self.guiCheckBox.grid(row=2, column=6, sticky="NSEW", padx=5, pady=5)
 
 
         return
@@ -200,8 +217,17 @@ class Application(Tk):
         self.terminalScrolledText.pack(side=LEFT, fill=BOTH, expand=TRUE)
         self.terminalScrolledText.configure(state='disabled')
 
-        testWindowButton = Button(terminalWindowFrame, text="Add Text", command=partial(addWindowText, self))
-        testWindowButton.pack()
+
+def handleClosing():
+    app.exitFlag = True
+    if app.runThread is not None and app.runThread.is_alive():
+        temp = app.runThread.ident
+        os.system("taskkill /PID " + str(temp))
+
+
+    if app.runAllThread is not None and app.runAllThread.is_alive():
+        os.kill(app.runAllThread.ident, 9)
+    app.destroy()
 
 
 # Create directories if they dont exist
@@ -220,4 +246,5 @@ if not os.path.exists(os.getcwd() + os.path.join("\\generatedruns")):
 app = Application()
 app.title("Digital Design Grading GUI")
 app.iconbitmap(os.getcwd() + os.path.join("\\images\\integrated-circuit.ico"))
+app.protocol("WM_DELETE_WINDOW", handleClosing)
 app.mainloop()

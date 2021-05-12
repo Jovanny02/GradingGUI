@@ -15,27 +15,7 @@ def tcl_function(tclFile, project_mpf, resultList, tclPath):
     basetcl += '''onElabError {resume}\nonerror {resume}\n\n'''
     
     basetcl += '''proc currStudent {lines student} {
-            set retry 1
-            while {$retry == 1} {
-                set retry 0
                 flush stdout
-                set in [gets stdin]
-                if {$in == "q"} {
-                    set result [string map -nocase {"\} \{" "\}\\n\{" "\} " "\}\\n" ".vhd " ".vhd\\n"} [project filenames]] 
-                    set lines [split $result "\\n"]
-
-                    foreach x $lines {
-                        if {[string match *true_testbench.vhd* $x] == 1} {
-                            set z 1
-                        } else {
-                            eval project removefile [string map -nocase { "\{\{" "\{" "\}\}" "\}" } $x]
-                        }
-                    } 
-                    quit -f
-                    }
-                if {$in == "n"} {
-                    return
-                    }
                     vdel -all
                     vlib work
                 for {set i 1} {$i<=2} {incr i} {
@@ -55,7 +35,7 @@ def tcl_function(tclFile, project_mpf, resultList, tclPath):
                 }
                    
 '''
-    basetcl += tclScript + '''\n}\n}\n'''
+    basetcl += tclScript + '''\n}\n'''
 
     for x in resultList:
         currtcl = basetcl

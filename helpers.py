@@ -1,8 +1,11 @@
+import sys
+import threading
+import time
 from tkinter import filedialog, END
-from pathlib import Path
+from concurrent.futures import *
 from zip_function import *
 import subprocess
-from subprocess import DEVNULL
+from subprocess import DEVNULL, PIPE, Popen, STDOUT
 from sim_function import compile_modelsim
 
 import os
@@ -25,7 +28,7 @@ def generateRun(self):
     tclPath = os.getcwd() + os.path.join(f"\\generatedruns\\{generationName}\\tcl")
     submissionsPath = os.getcwd() + os.path.join(f'''\\generatedruns\\{generationName}\\submissions''')
     modelsimPath = os.getcwd() + os.path.join(f'''\\generatedruns\\{generationName}\\modelsim''')
-    #Create Directory For Run
+    # Create Directory For Run
     if not os.path.exists(os.getcwd() + os.path.join(f"\\generatedruns\\{generationName}")):
         os.makedirs(os.getcwd() + os.path.join(f"\\generatedruns\\{generationName}"))
         os.makedirs(modelsimPath)
@@ -37,7 +40,10 @@ def generateRun(self):
         return
 
     # Extract submissions
-    zip_opener(submissionsPath, selectedStudentList, chosenZip, False)
+    deleteZip = False
+    if self.deleteZipVal.get() == 1:
+        deleteZip = True
+    zip_opener(submissionsPath, selectedStudentList, chosenZip, deleteZip)
 
     # create modelsim project
     createProjectCommand = f'''project new "{modelsimPath}" {generationName}'''
@@ -86,18 +92,10 @@ def refreshTBs(self):
         print("NO TESTBENCH FILES!")
 
 
-def addWindowText(self):
-    numLines = len(self.terminalScrolledText.get('1.0', END).splitlines())
-    self.terminalScrolledText.configure(state='normal')
-    self.terminalScrolledText.insert(END, " > HELLLO! THIS IS A TEST! INSERT NUMBER: "
-                                     + str(numLines) + "\n")
-    self.terminalScrolledText.configure(state='disabled')
-
-
-def clearWindowText(self):
-    self.terminalScrolledText.configure(state='normal')
-    self.terminalScrolledText.delete('1.0', END)
-    self.terminalScrolledText.configure(state='disabled')
+def clearWindowText(terminalScrolledText):
+    terminalScrolledText.configure(state='normal')
+    terminalScrolledText.delete('1.0', END)
+    terminalScrolledText.configure(state='disabled')
 
 
 def loadRuns(self):
@@ -107,15 +105,16 @@ def loadRuns(self):
 
 
 def deleteRun(self):
-    if self.runComboBox.get() == "Choose Run":
+    if self.runComboBox.get() == "'Choose Grading Project'":
         return
 
     shutil.rmtree(os.getcwd() + os.path.join(f"\\generatedruns\\{self.runComboBox.get()}"))
     loadRuns(self)
+    self.runComboBox.set('Choose Grading Project')
 
 
 def loadStudents(self):
-    if self.runComboBox.get() == "Choose Run":
+    if self.runComboBox.get() == 'Choose Grading Project':
         return
 
     self.studentComboBox.delete(0, self.tbListBox.size())
@@ -124,13 +123,28 @@ def loadStudents(self):
     try:
         for file in os.listdir(studentsDir):
             if file.endswith(".tcl"):
-                students.append(file[0: len(file)-4])
+                students.append(file[0: len(file) - 4])
     except:
         print("NO TESTBENCH FILES!")
 
+    self.currentProject = self.runComboBox.get()
     self.studentComboBox['values'] = students
     self.studentComboBox.set('Choose Student')
     return
+
+
+def checkOutputLoop(text, process, student):
+    clearWindowText(text)
+    tempData, err = process.communicate()
+    for line in tempData.split("\n"):
+        text.configure(state='normal')
+        text.insert(END, line + "\n")
+
+    text.insert(END, f"Results for {student}\n")
+    text.configure(state='disabled')
+    process.terminate()
+    text.yview(END)
+    sys.exit()
 
 
 def runStudent(self):
@@ -148,7 +162,83 @@ def runStudent(self):
         return
 
     try:
-        subprocess.run(cmd, shell=True, stdout=True, stderr=DEVNULL)
+        self.subProcess = Popen(cmd, stdout=PIPE, stdin=PIPE, stderr=STDOUT, text=True, universal_newlines=True)
+
+
     except:
         print(''' Something didn't work... ¯\_(ツ)_/¯ ''')
+
+    # self.runThread = threading.Thread(target=checkOutputLoop, name="windowThread",
+    #                                   args=(self.terminalScrolledText, self.subProcess, self.studentComboBox.get()))
+    # self.runThread.daemon = True
+    # self.runThread.start()
+    with ThreadPoolExecutor() as executor:
+        self.runThread = executor.submit(checkOutputLoop, self.terminalScrolledText, self.subProcess,
+                                         self.studentComboBox.get())
+
     return
+
+
+def runNextStudent(self):
+    nextIndex = self.studentComboBox.current() + 1
+    if nextIndex >= len(self.studentComboBox["values"]):
+        return
+
+    self.studentComboBox.current(nextIndex)
+    runStudent(self)
+
+
+def runAllStudents(self):
+    self.runALlThread = threading.Thread(target=runAllStudentsHelper, name="runAllThread",
+                                         args=(self.terminalScrolledText, self.studentComboBox,
+                                               self.guiCheckBoxVal, self.currentProject, self.exitFlag))
+    self.runALlThread.daemon = True
+    self.runALlThread.start()
+    return
+
+
+def runAllStudentsHelper(text, studentComboBox, useGuiCheckBox, currProject, exitFlag):
+    if currProject is None:
+        return
+
+    projectDir = os.getcwd() + os.path.join(f"\\generatedruns\\{currProject}\\tcl\\")
+
+    for x in range(studentComboBox.current(), len(studentComboBox["values"])):
+        if x == -1:
+            continue
+
+        if exitFlag:
+            break
+        # set current index
+        studentComboBox.current(x)
+        currStudent = studentComboBox.get()
+        # get the files for each student
+        currDir = projectDir + os.path.join(currStudent + ".tcl")
+        currDir = currDir.replace(os.sep, "/")
+        if useGuiCheckBox.get() == 1:
+            cmd = f'''vsim -gui -l "" -do "{os.path.abspath(currDir)}"'''
+        else:
+            cmd = f'''vsim -c -l "" -do "{os.path.abspath(currDir)}"'''
+        try:
+            subProcess = Popen(cmd, stdout=PIPE, stdin=PIPE, stderr=STDOUT, text=True, universal_newlines=True)
+        except:
+            print(''' Something didn't work... ¯\_(ツ)_/¯ ''')
+            continue
+
+        tempData, err = subProcess.communicate()
+        clearWindowText(text)
+        for line in tempData.split("\n"):
+            text.configure(state='normal')
+            text.insert(END, line + "\n")
+
+        text.insert(END, f"Results for {currStudent}\n")
+        text.configure(state='disabled')
+        text.yview(END)
+        time.sleep(1)
+
+    # kill thread
+    sys.exit()
+
+
+def stopRunning(self):
+    exitFlag = True
