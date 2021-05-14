@@ -27,7 +27,7 @@ def uploadTCLFile(self):
 
     if len(files) == 1:
         # Generate an animation for the result
-        self.textUploadVar.set("Uploaded " + files[0].name[files[0].name.rfind("/") + 1:len(files[0].name)])
+        self.textUploadVar.set("Uploaded " + files[0][files[0].rfind("/") + 1:len(files[0])])
         self.studentListLabel['fg'] = "#006400"
     elif len(files) > 1:
         self.textUploadVar.set("Uploaded " + str(len(files)) + " Files")
@@ -47,8 +47,13 @@ def uploadVHDFile(self):
                 return
             tf = open(tf)  # or tf = open(tf, 'r')
 
+            filename = tf.name[tf.name.rfind("/") + 1:len(tf.name)]
             # copy file over to tcl locations
-            shutil.copy(tf.name, os.getcwd() + os.path.join("\\testbenchces"))
+            if filename.endswith("true_testbench.vhd"):
+                shutil.copy(tf.name, os.getcwd() + os.path.join("\\testbenchces"))
+            else:
+                shutil.copy(tf.name, os.getcwd() + os.path.join(f'''\\testbenchces\\{filename[0:len(filename)-4]}_true_testbench.vhd''' ))
+
             tf.close()
     except:
         self.textUploadVar.set("An Error Occurred")
@@ -56,7 +61,7 @@ def uploadVHDFile(self):
 
     if len(files) == 1:
         # Generate an animation for the result
-        self.textUploadVar.set("Uploaded " + files[0].name[files[0].name.rfind("/") + 1:len(files[0].name)])
+        self.textUploadVar.set("Uploaded " + files[0][files[0].rfind("/") + 1:len(files[0])])
         self.studentListLabel['fg'] = "#006400"
     elif len(files) > 1:
         self.textUploadVar.set("Uploaded " + str(len(files)) + " Files")
@@ -87,7 +92,7 @@ def uploadTextFile(self):
 
     if len(files) == 1:
         # Generate an animation for the result
-        self.textUploadVar.set("Uploaded " + files[0].name[files[0].name.rfind("/") + 1:len(files[0].name)])
+        self.textUploadVar.set("Uploaded " + files[0][files[0].rfind("/") + 1:len(files[0])])
         self.studentListLabel['fg'] = "#006400"
     elif len(files) > 1:
         self.textUploadVar.set("Uploaded " + str(len(files)) + " Files")

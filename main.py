@@ -1,8 +1,9 @@
 import functools
 import signal
 from tkinter import *
+from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
-from tkinter.ttk import Combobox
+from tkinter.ttk import Combobox, Style
 
 from OpenFiles import *
 from functools import partial
@@ -32,7 +33,16 @@ class Application(Tk):
         self.timer = 0
         self.currentStudent = None
         self.isGenerating = False
+        self.style = None
 
+        # Create a style
+        self.style = Style(self)
+        # Import the tcl file
+        self.tk.call('source', 'azure-dark.tcl')
+        self.tk.call('source', 'azure.tcl')
+
+        # Set the theme with the theme_use method
+        self.style.theme_use('azure')
 
         self.createLayout()
         self.createUploadFiles()
@@ -40,7 +50,7 @@ class Application(Tk):
         self.createScrollWindow()
         self.createRunProjectFrame()
         # Load Runs
-        loadRuns(self)
+        loadProjects(self)
         self.updateTimer()
 
     def createLayout(self):
@@ -50,7 +60,7 @@ class Application(Tk):
         self.grid_rowconfigure(0, weight=1)
 
         # create left column
-        self.leftFrame = Frame(self)
+        self.leftFrame = ttk.Frame(self)
         self.leftFrame.grid(row=0, column=0, sticky="NSWE")
 
         # create left column subgrid
@@ -59,7 +69,7 @@ class Application(Tk):
         self.leftFrame.grid_rowconfigure(1, weight=2)
 
         # create right column
-        self.rightFrame = Frame(self)
+        self.rightFrame = ttk.Frame(self)
         self.rightFrame.grid(row=0, column=1, sticky="NSWE")
 
         # create right column subgrid
@@ -70,84 +80,92 @@ class Application(Tk):
 
 
     def createUploadFiles(self):
-        self.uploadFileFrame = Frame(self.leftFrame, highlightthickness=1, highlightbackground="black")
+        self.uploadFileFrame = ttk.Frame(self.leftFrame, borderwidth=1, relief='solid') # highlightthickness=1, highlightbackground="black")
         self.uploadFileFrame.grid(row=0, column=0, sticky="NSEW", padx=5, pady=5)
 
-        # Title label
-        uploadFileTitle = Label(self.uploadFileFrame, text="Upload New Files", font=("TkDefaultFont", 18))
-        uploadFileTitle.grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=W)
+        # Titlettk.Label
+        uploadFileTitle =ttk.Label(self.uploadFileFrame, text="Upload New Files", font=("TkDefaultFont", 18))
+        uploadFileTitle.grid(row=0, column=0, columnspan=2, sticky="NSEW", padx=5, pady=(5, 0))
+
+        # Title sep
+        sep = ttk.Separator(self.uploadFileFrame, orient='horizontal')
+        sep.grid(row=1, column=0, columnspan=2, padx=5, pady=(0, 5), sticky='NEW')
 
         # TCL upload
         self.tclUploadVar = StringVar(self.uploadFileFrame)
-        tclLabel = Label(self.uploadFileFrame, text="TCL Files: ").grid(row=1, column=0, sticky=W)
-        self.tclStatusLabel = Label(self.uploadFileFrame, textvariable=self.tclUploadVar)
-        self.tclStatusLabel.grid(row=1, column=2, sticky=W)
-        tclButton = Button(self.uploadFileFrame, text="Select Files",
+        tclLabel =ttk.Label(self.uploadFileFrame, text="TCL Files: ").grid(row=2, column=0, sticky=W)
+        self.tclStatusLabel =ttk.Label(self.uploadFileFrame, textvariable=self.tclUploadVar)
+        self.tclStatusLabel.grid(row=2, column=2, sticky=W)
+        tclButton = ttk.Button(self.uploadFileFrame, text="Select Files", style='AccentButton',
                            command=partial(uploadTCLFile, self))
-        tclButton.grid(row=1, column=1, sticky=W, padx=5, pady=5)
+        tclButton.grid(row=2, column=1, sticky=W, padx=5, pady=5)
 
         # Testbench upload
         self.tbUploadVar = StringVar(self.uploadFileFrame)
-        testBenchLabel = Label(self.uploadFileFrame, text="VHDL Test Benches: ").grid(row=2, column=0, sticky=W)
-        self.tbUploadLabel = Label(self.uploadFileFrame, textvariable=self.tbUploadVar)
-        self.tbUploadLabel.grid(row=2, column=2, sticky=W)
+        testBenchLabel =ttk.Label(self.uploadFileFrame, text="VHDL Test Benches: ").grid(row=3, column=0, sticky=W)
+        self.tbUploadLabel =ttk.Label(self.uploadFileFrame, textvariable=self.tbUploadVar)
+        self.tbUploadLabel.grid(row=3, column=2, sticky=W)
 
-        testBenchButton = Button(self.uploadFileFrame, text="Select Files", command=partial(uploadVHDFile, self))
-        testBenchButton.grid(row=2, column=1, sticky=W, padx=5, pady=5)
+        testBenchButton = ttk.Button(self.uploadFileFrame, style='AccentButton', text="Select Files", command=partial(uploadVHDFile, self))
+        testBenchButton.grid(row=3, column=1, sticky=W, padx=5, pady=5)
 
         # Student List upload
         self.textUploadVar = StringVar(self.uploadFileFrame)
-        studentListLabel = Label(self.uploadFileFrame, text="Student Lists: ").grid(row=3, column=0, sticky=W)
-        self.studentListLabel = Label(self.uploadFileFrame, textvariable=self.textUploadVar)
-        self.studentListLabel.grid(row=3, column=2, sticky=W)
+        studentListLabel =ttk.Label(self.uploadFileFrame, text="Student Lists: ").grid(row=4, column=0, sticky=W)
+        self.studentListLabel =ttk.Label(self.uploadFileFrame, textvariable=self.textUploadVar)
+        self.studentListLabel.grid(row=4, column=2, sticky=W)
 
-        studentListButton = Button(self.uploadFileFrame, text="Select Files",
+        studentListButton = ttk.Button(self.uploadFileFrame, text="Select Files", style='AccentButton',
                                    command=partial(uploadTextFile, self))
-        studentListButton.grid(row=3, column=1, sticky=W, padx=5, pady=5)
+        studentListButton.grid(row=4, column=1, sticky=W, padx=5, pady=5)
 
     def createNewProjectFrame(self):
-        self.generateNewRunFrame = Frame(self.leftFrame, highlightthickness=1, highlightbackground="black")
+        self.generateNewRunFrame = ttk.Frame(self.leftFrame, borderwidth=1, relief='solid') # highlightthickness=1, highlightbackground="black")
         self.generateNewRunFrame.grid(row=1, column=0, sticky="NSEW", padx=5, pady=5)
 
-        # Title label
-        uploadFileTitle = Label(self.generateNewRunFrame, text="Create Grading Project", font=("TkDefaultFont", 18))
-        uploadFileTitle.grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=W)
+        # Titlettk.Label
+        uploadFileTitle =ttk.Label(self.generateNewRunFrame, text="Create Grading Project", font=("TkDefaultFont", 18))
+        uploadFileTitle.grid(row=0, column=0, columnspan=2, padx=5, pady=(5, 0), sticky=W)
+
+        # Title sep
+        sep = ttk.Separator(self.generateNewRunFrame, orient='horizontal')
+        sep.grid(row=1, column=0, columnspan=2, padx=5, pady=(0, 5), sticky='NEW')
 
         # choose TCL
         self.tclVar = StringVar(self.generateNewRunFrame)
-        self.chooseTclLabel = Label(self.generateNewRunFrame, text="")
-        self.chooseTclLabel.grid(row=1, column=1, sticky=W)
-        tclButton = Button(self.generateNewRunFrame, text="Select TCL Script", command=partial(openTCLFile, self))
-        tclButton.grid(row=1, column=0, sticky=W, padx=5, pady=5)
+        self.chooseTclLabel =ttk.Label(self.generateNewRunFrame, text="")
+        self.chooseTclLabel.grid(row=2, column=1, sticky=W)
+        tclButton = ttk.Button(self.generateNewRunFrame,style='AccentButton', text="Select TCL Script", command=partial(openTCLFile, self))
+        tclButton.grid(row=2, column=0, sticky=W, padx=5, pady=5)
 
         # choose student list
         self.studentListVar = StringVar(self.generateNewRunFrame)
-        self.chooseStudentsLabel = Label(self.generateNewRunFrame, text="")
-        self.chooseStudentsLabel.grid(row=2, column=1, sticky=W)
-        tclButton = Button(self.generateNewRunFrame, text="Select Student List",
+        self.chooseStudentsLabel =ttk.Label(self.generateNewRunFrame, text="")
+        self.chooseStudentsLabel.grid(row=3, column=1, sticky=W)
+        tclButton = ttk.Button(self.generateNewRunFrame, text="Select Student List", style='AccentButton',
                            command=partial(openStudentListFile, self))
-        tclButton.grid(row=2, column=0, sticky=W, padx=5, pady=5)
+        tclButton.grid(row=3, column=0, sticky=W, padx=5, pady=5)
 
         # ZIP file upload
         self.zipVar = StringVar(self.generateNewRunFrame)
-        self.zipLabel = Label(self.generateNewRunFrame, text="")
-        self.zipLabel.grid(row=3, column=1, sticky=W)
-        zipButton = Button(self.generateNewRunFrame, text="Choose Zip File", command=partial(uploadZipFile, self))
-        zipButton.grid(row=3, column=0, sticky=W, padx=5, pady=5)
+        self.zipLabel =ttk.Label(self.generateNewRunFrame, text="")
+        self.zipLabel.grid(row=4, column=1, sticky=W)
+        zipButton = ttk.Button(self.generateNewRunFrame, style='AccentButton', text="Choose Zip File", command=partial(uploadZipFile, self))
+        zipButton.grid(row=4, column=0, sticky=W, padx=5, pady=5)
 
         self.deleteZipVal = IntVar()
-        self.zipCheckBox = Checkbutton(self.generateNewRunFrame, variable=self.deleteZipVal, text="delete zip")
-        self.zipCheckBox.grid(row=3, column=2, sticky="NSEW", padx=5, pady=5)
+        self.zipCheckBox = ttk.Checkbutton(self.generateNewRunFrame, variable=self.deleteZipVal, style='Switch', text="delete zip")
+        self.zipCheckBox.grid(row=4, column=2, sticky="NSEW", padx=5, pady=5)
 
         # testbench label
-        chooseTbLabel = Label(self.generateNewRunFrame, text="Choose Testbenches", font=("TkDefaultFont", 12))
-        chooseTbLabel.grid(row=4, column=0, columnspan=2, padx=5, sticky=W)
+        chooseTbLabel =ttk.Label(self.generateNewRunFrame, text="Choose Testbenches", font=("TkDefaultFont", 12))
+        chooseTbLabel.grid(row=5, column=0, columnspan=2, padx=5, sticky=W)
 
-        refreshButton = Button(self.generateNewRunFrame, text="Refresh TBs", command=partial(refreshTBs, self))
-        refreshButton.grid(row=4, column=2, padx=5, sticky="NSEW")
+        refreshButton = ttk.Button(self.generateNewRunFrame, style='AccentButton', text="Refresh TBs", command=partial(refreshTBs, self))
+        refreshButton.grid(row=5, column=2, padx=5, sticky="NSEW")
         # choose testbenches
-        listFrame = Frame(self.generateNewRunFrame, highlightthickness=1, highlightbackground="black")
-        listFrame.grid(row=5, column=0, columnspan=2, sticky="NSEW", padx=5, pady=5)
+        listFrame = ttk.Frame(self.generateNewRunFrame, borderwidth=1, relief='solid')#  highlightthickness=1, highlightbackground="black")
+        listFrame.grid(row=6, column=0, columnspan=2, sticky="NSEW", padx=5, pady=5)
 
         self.tbListBox = Listbox(listFrame, selectmode="multiple", highlightthickness=1, highlightbackground="black")
         self.tbListBox.pack(side=LEFT, fill=BOTH, expand=TRUE)
@@ -161,69 +179,81 @@ class Application(Tk):
         refreshTBs(self)
 
         # choose generated name
-        generationLabel = Label(self.generateNewRunFrame, text="Grading Project Name: ").grid(row=6, column=0, sticky=W)
-        self.generationEntry = Entry(self.generateNewRunFrame, highlightthickness=1, highlightbackground="black")
-        self.generationEntry.grid(row=6, column=1, sticky=W, padx=5, pady=5)
+        generationLabel =ttk.Label(self.generateNewRunFrame, text="Grading Project Name: ").grid(row=7, column=0, sticky=W)
+        self.generationEntry = ttk.Entry(self.generateNewRunFrame)
+        self.generationEntry.grid(row=7, column=1, sticky=W, padx=5, pady=5)
 
         # choose generated name
-        generateButton = Button(self.generateNewRunFrame, text="Create",
+        generateButton = ttk.Button(self.generateNewRunFrame, text="Create", style='AccentButton',
                                 command=partial(generateRun, self))
-        generateButton.grid(row=6, column=2, sticky="NSEW", padx=5, pady=5)
+        generateButton.grid(row=7, column=2, sticky="NSEW", padx=5, pady=5)
 
         # error label
         self.errorLabel = Label(self.generateNewRunFrame, text="", fg="red")
-        self.errorLabel.grid(row=7, column=0, columnspan=3, sticky=W)
+        self.errorLabel.grid(row=8, column=0, columnspan=3, sticky=W)
 
     def createRunProjectFrame(self):
-        runFrame = Frame(self.rightFrame, highlightthickness=1, highlightbackground="black")
+        runFrame = ttk.Frame(self.rightFrame, borderwidth=1, relief='solid') # highlightthickness=1, highlightbackground="black")
         runFrame.grid(row=0, column=0, sticky="NSEW", padx=5, pady=5)
 
-        runTitle = Label(runFrame, text="Run Grading Project", font=("TkDefaultFont", 18))
-        runTitle.grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=W)
+        runTitle =ttk.Label(runFrame, text="Run Grading Project", font=("TkDefaultFont", 18))
+        runTitle.grid(row=0, column=0, columnspan=2, padx=5, pady=(5, 0), sticky=W)
+
+        # Title sep
+        sep = ttk.Separator(runFrame, orient='horizontal')
+        sep.grid(row=1, column=0, columnspan=2, padx=5, pady=(0, 5), sticky='NEW')
 
         # select run comboBox and button
         self.projectComboBox = Combobox(runFrame)
-        self.projectComboBox.grid(row=1, column=0, sticky="NSEW", padx=5, pady=5)
+        self.projectComboBox.grid(row=2, column=0, sticky="NSEW", padx=5, pady=5)
         self.projectComboBox.set('Choose Grading Project')
-        loadButton = Button(runFrame, text="Load", command=partial(loadStudents, self))
-        loadButton.grid(row=1, column=1, sticky="NSEW", padx=5, pady=5)
+        loadButton = ttk.Button(runFrame, text="Load Project", style='AccentButton',command=partial(loadStudents, self))
+        loadButton.grid(row=2, column=1, sticky="NSEW", padx=5, pady=5)
 
-        deleteButton = Button(runFrame, text="Delete", command=partial(deleteRun, self))
-        deleteButton.grid(row=1, column=2, sticky="NSEW", padx=5, pady=5)
+        deleteButton =ttk.Button(runFrame, text="Delete", style='AccentButton', command=partial(deleteProject, self))
+        deleteButton.grid(row=2, column=2, sticky="NSEW", padx=5, pady=5)
+
+        self.themeVar = IntVar()
+        self.themeCheckBox = ttk.Checkbutton(runFrame, variable=self.themeVar, style='Switch',
+                                                   text="Dark Mode", command=self.toggleTheme)
+        self.themeCheckBox.grid(row=2, column=7, sticky="NSEW", padx=5, pady=5)
 
         # select student comboBox
         self.studentComboBox = Combobox(runFrame)
-        self.studentComboBox.grid(row=2, column=0, sticky="NSEW", padx=5, pady=5)
+        self.studentComboBox.grid(row=3, column=0, sticky="NSEW", padx=5, pady=5)
         self.studentComboBox.set('Choose Student')
-        runButton = Button(runFrame, text="Run", command=partial(runStudent, self))
-        runButton.grid(row=2, column=1, sticky="NSEW", padx=5, pady=5)
+        runButton = ttk.Button(runFrame, style='AccentButton', text="Run", command=partial(runStudent, self))
+        runButton.grid(row=3, column=1, sticky="NSEW", padx=5, pady=5)
 
-        runButton = Button(runFrame, text="Run Next", command=partial(runNextStudent, self))
-        runButton.grid(row=2, column=2, sticky="NSEW", padx=5, pady=5)
+        runButton = ttk.Button(runFrame, style='AccentButton', text="Run Next", command=partial(runNextStudent, self))
+        runButton.grid(row=3, column=2, sticky="NSEW", padx=5, pady=5)
 
-        runButton = Button(runFrame, text="Run All", command=partial(runAllStudents, self))
-        runButton.grid(row=2, column=3, sticky="NSEW", padx=5, pady=5)
+        runButton = ttk.Button(runFrame, style='AccentButton', text="Run All", command=partial(runAllStudents, self))
+        runButton.grid(row=3, column=3, sticky="NSEW", padx=5, pady=5)
 
-        clearWindowButton = Button(runFrame, text="Clear Window", command=partial(clearWindowText, self.terminalScrolledText))
-        clearWindowButton.grid(row=2, column=4, sticky="NSEW", padx=5, pady=5)
+        clearWindowButton = ttk.Button(runFrame, style='AccentButton', text="Clear Window", command=partial(clearWindowText, self.terminalScrolledText))
+        clearWindowButton.grid(row=3, column=4, sticky="NSEW", padx=5, pady=5)
 
-        quitWindowButton = Button(runFrame, text="Stop", command=partial(stopRunning, self))
-        quitWindowButton.grid(row=2, column=5, sticky="NSEW", padx=5, pady=5)
+        quitWindowButton = ttk.Button(runFrame, style='AccentButton', text="Stop", command=partial(stopRunning, self))
+        quitWindowButton.grid(row=3, column=5, sticky="NSEW", padx=5, pady=5)
 
         self.guiCheckBoxVal = IntVar()
-        self.guiCheckBox = Checkbutton(runFrame, variable=self.guiCheckBoxVal, text="gui")
-        self.guiCheckBox.grid(row=2, column=6, sticky="NSEW", padx=5, pady=5)
+        self.guiCheckBox = ttk.Checkbutton(runFrame, variable=self.guiCheckBoxVal, style='Switch', text="gui")
+        self.guiCheckBox.grid(row=3, column=6, sticky="NSEW", padx=5, pady=5)
 
-
+        self.parseOutputVar = IntVar()
+        self.parseOutputCheckBox = ttk.Checkbutton(runFrame, variable=self.parseOutputVar, style='Switch',
+                                                   text="Result Only")
+        self.parseOutputCheckBox.grid(row=3, column=7, sticky="NSEW", padx=5, pady=5)
         return
 
     def createScrollWindow(self):
         # create scrollWindow
-        terminalWindowFrame = Frame(self.rightFrame, highlightthickness=1, highlightbackground="black")
+        terminalWindowFrame = ttk.Frame(self.rightFrame, borderwidth=1, relief='solid') # highlightthickness=1, highlightbackground="black")
         terminalWindowFrame.grid(row=1, column=0, sticky="NSEW", padx=5, pady=5)
 
         self.windowStatusVar = StringVar(terminalWindowFrame)
-        windowStatusLabel = Label(terminalWindowFrame, textvariable=self.windowStatusVar)
+        windowStatusLabel = ttk.Label(terminalWindowFrame, textvariable=self.windowStatusVar)
         windowStatusLabel.pack(side=BOTTOM)
 
         self.terminalScrolledText = ScrolledText(terminalWindowFrame, highlightthickness=1, highlightbackground="black")
@@ -257,6 +287,36 @@ class Application(Tk):
 
     def clearTimer(self):
         self.timer = 0
+
+    def toggleTheme(self):
+        style = self.style.theme_use()
+        if self.style.theme_use() == 'azure':
+            self.style.theme_use('azure-dark')
+            # set listbox background
+            self.tbListBox["bg"] = "#333333"
+            self.tbListBox["fg"] = "#ffffff"
+            # set window background
+            self.terminalScrolledText["bg"] = "#333333"
+            self.terminalScrolledText["fg"] = "#ffffff"
+            # set label background
+            self.errorLabel["bg"] = "#333333"
+            # only toggle text color if it is black or white
+            if self.errorLabel["fg"] == "#000000":
+                self.errorLabel["fg"] = "#ffffff"
+            return
+        # set ttk element backgrounds
+        self.style.theme_use('azure')
+        # set other backgrounds that cant be set using style
+        self.tbListBox["bg"] = "#ffffff"
+        self.tbListBox["fg"] = "#000000"
+        # set window background
+        self.terminalScrolledText["bg"] = "#ffffff"
+        self.terminalScrolledText["fg"] = "#000000"
+        # set label background
+        self.errorLabel["bg"] = "#ffffff"
+        if self.errorLabel["fg"] == "#ffffff":
+            self.errorLabel["fg"] = "#000000"
+
 
     def updateTimer(self):
         if not self.isRunning and not self.isGenerating:
