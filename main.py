@@ -1,3 +1,4 @@
+import functools
 import signal
 from tkinter import *
 from tkinter.scrolledtext import ScrolledText
@@ -27,16 +28,20 @@ class Application(Tk):
         self.runThread = None
         self.runAllThread = None
         self.currentProject = None
-
+        self.isRunning = False
+        self.timer = 0
+        self.currentStudent = None
+        self.isGenerating = False
 
 
         self.createLayout()
         self.createUploadFiles()
-        self.createNewRun()
+        self.createNewProjectFrame()
         self.createScrollWindow()
-        self.createRunFrame()
+        self.createRunProjectFrame()
         # Load Runs
         loadRuns(self)
+        self.updateTimer()
 
     def createLayout(self):
         # create two columns
@@ -69,38 +74,38 @@ class Application(Tk):
         self.uploadFileFrame.grid(row=0, column=0, sticky="NSEW", padx=5, pady=5)
 
         # Title label
-        uploadFileTitle = Label(self.uploadFileFrame, text="Upload New File", font=("TkDefaultFont", 18))
+        uploadFileTitle = Label(self.uploadFileFrame, text="Upload New Files", font=("TkDefaultFont", 18))
         uploadFileTitle.grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=W)
 
         # TCL upload
         self.tclUploadVar = StringVar(self.uploadFileFrame)
-        tclLabel = Label(self.uploadFileFrame, text="TCL File: ").grid(row=1, column=0, sticky=W)
+        tclLabel = Label(self.uploadFileFrame, text="TCL Files: ").grid(row=1, column=0, sticky=W)
         self.tclStatusLabel = Label(self.uploadFileFrame, textvariable=self.tclUploadVar)
         self.tclStatusLabel.grid(row=1, column=2, sticky=W)
-        tclButton = Button(self.uploadFileFrame, text="Select File",
+        tclButton = Button(self.uploadFileFrame, text="Select Files",
                            command=partial(uploadTCLFile, self))
         tclButton.grid(row=1, column=1, sticky=W, padx=5, pady=5)
 
         # Testbench upload
         self.tbUploadVar = StringVar(self.uploadFileFrame)
-        testBenchLabel = Label(self.uploadFileFrame, text="VHDL Test Bench: ").grid(row=2, column=0, sticky=W)
+        testBenchLabel = Label(self.uploadFileFrame, text="VHDL Test Benches: ").grid(row=2, column=0, sticky=W)
         self.tbUploadLabel = Label(self.uploadFileFrame, textvariable=self.tbUploadVar)
         self.tbUploadLabel.grid(row=2, column=2, sticky=W)
 
-        testBenchButton = Button(self.uploadFileFrame, text="Select File", command=partial(uploadVHDFile, self))
+        testBenchButton = Button(self.uploadFileFrame, text="Select Files", command=partial(uploadVHDFile, self))
         testBenchButton.grid(row=2, column=1, sticky=W, padx=5, pady=5)
 
         # Student List upload
         self.textUploadVar = StringVar(self.uploadFileFrame)
-        studentListLabel = Label(self.uploadFileFrame, text="Student List: ").grid(row=3, column=0, sticky=W)
+        studentListLabel = Label(self.uploadFileFrame, text="Student Lists: ").grid(row=3, column=0, sticky=W)
         self.studentListLabel = Label(self.uploadFileFrame, textvariable=self.textUploadVar)
         self.studentListLabel.grid(row=3, column=2, sticky=W)
 
-        studentListButton = Button(self.uploadFileFrame, text="Select File",
+        studentListButton = Button(self.uploadFileFrame, text="Select Files",
                                    command=partial(uploadTextFile, self))
         studentListButton.grid(row=3, column=1, sticky=W, padx=5, pady=5)
 
-    def createNewRun(self):
+    def createNewProjectFrame(self):
         self.generateNewRunFrame = Frame(self.leftFrame, highlightthickness=1, highlightbackground="black")
         self.generateNewRunFrame.grid(row=1, column=0, sticky="NSEW", padx=5, pady=5)
 
@@ -144,11 +149,15 @@ class Application(Tk):
         listFrame = Frame(self.generateNewRunFrame, highlightthickness=1, highlightbackground="black")
         listFrame.grid(row=5, column=0, columnspan=2, sticky="NSEW", padx=5, pady=5)
 
-        slide = Scrollbar(listFrame, orient=VERTICAL)
-        slide.pack(side=RIGHT, expand=FALSE)
-
         self.tbListBox = Listbox(listFrame, selectmode="multiple", highlightthickness=1, highlightbackground="black")
         self.tbListBox.pack(side=LEFT, fill=BOTH, expand=TRUE)
+
+        slide = Scrollbar(listFrame, orient=VERTICAL)
+        slide.pack(side=RIGHT, fill=Y)  # expand=FALSE)
+
+        self.tbListBox.configure(yscrollcommand=slide.set)
+        slide.configure(command=self.tbListBox.yview)
+
         refreshTBs(self)
 
         # choose generated name
@@ -165,7 +174,7 @@ class Application(Tk):
         self.errorLabel = Label(self.generateNewRunFrame, text="", fg="red")
         self.errorLabel.grid(row=7, column=0, columnspan=3, sticky=W)
 
-    def createRunFrame(self):
+    def createRunProjectFrame(self):
         runFrame = Frame(self.rightFrame, highlightthickness=1, highlightbackground="black")
         runFrame.grid(row=0, column=0, sticky="NSEW", padx=5, pady=5)
 
@@ -173,9 +182,9 @@ class Application(Tk):
         runTitle.grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=W)
 
         # select run comboBox and button
-        self.runComboBox = Combobox(runFrame)
-        self.runComboBox.grid(row=1, column=0, sticky="NSEW", padx=5, pady=5)
-        self.runComboBox.set('Choose Grading Project')
+        self.projectComboBox = Combobox(runFrame)
+        self.projectComboBox.grid(row=1, column=0, sticky="NSEW", padx=5, pady=5)
+        self.projectComboBox.set('Choose Grading Project')
         loadButton = Button(runFrame, text="Load", command=partial(loadStudents, self))
         loadButton.grid(row=1, column=1, sticky="NSEW", padx=5, pady=5)
 
@@ -213,20 +222,65 @@ class Application(Tk):
         terminalWindowFrame = Frame(self.rightFrame, highlightthickness=1, highlightbackground="black")
         terminalWindowFrame.grid(row=1, column=0, sticky="NSEW", padx=5, pady=5)
 
+        self.windowStatusVar = StringVar(terminalWindowFrame)
+        windowStatusLabel = Label(terminalWindowFrame, textvariable=self.windowStatusVar)
+        windowStatusLabel.pack(side=BOTTOM)
+
         self.terminalScrolledText = ScrolledText(terminalWindowFrame, highlightthickness=1, highlightbackground="black")
         self.terminalScrolledText.pack(side=LEFT, fill=BOTH, expand=TRUE)
         self.terminalScrolledText.configure(state='disabled')
 
 
+
+    def clearSubprocess(self):
+        self.subProcess = None
+
+    def assignSubprocess(self, cmd):
+        self.subProcess = None
+        self.subProcess = Popen(cmd, stdout=PIPE, stdin=PIPE, stderr=STDOUT, text=True, universal_newlines=True)
+        return self.subProcess
+
+    def setCurrStudent(self, student):
+        self.currentStudent = student
+
+    def getTimer(self):
+        return self.timer
+
+    def setExitFlag(self, flag):
+        self.exitFlag = flag
+
+    def setIsGenerating(self, val):
+        self.isGenerating = val
+
+    def getExitFlag(self):
+        return self.exitFlag
+
+    def clearTimer(self):
+        self.timer = 0
+
+    def updateTimer(self):
+        if not self.isRunning and not self.isGenerating:
+            self.after(1000, self.updateTimer)
+            return
+
+        if self.isGenerating:
+            self.errorLabel['fg'] = "black"
+            self.errorLabel['text'] = f'''Generating... {getTimerText(self.timer, operator.floordiv) }:{getTimerText(self.timer, operator.mod)}'''
+        if self.isRunning:
+            self.windowStatusVar.set(f'''Running {self.currentStudent}. Time Elapsed: {getTimerText(self.timer, operator.floordiv) }:{getTimerText(self.timer, operator.mod)}''')
+
+        # update time
+        self.timer += 1
+        self.after(1000, self.updateTimer)
+
+    def setIsRunning(self, val):
+        self.isRunning = val
+
+
 def handleClosing():
     app.exitFlag = True
-    if app.runThread is not None and app.runThread.is_alive():
-        temp = app.runThread.ident
-        os.system("taskkill /PID " + str(temp))
-
-
-    if app.runAllThread is not None and app.runAllThread.is_alive():
-        os.kill(app.runAllThread.ident, 9)
+    if app.subProcess is not None:
+        app.subProcess.terminate()
     app.destroy()
 
 
@@ -240,8 +294,8 @@ if not os.path.exists(os.getcwd() + os.path.join("\\testbenchces")):
 if not os.path.exists(os.getcwd() + os.path.join("\\studentlists")):
     os.makedirs(os.getcwd() + os.path.join("\\studentlists"))
 
-if not os.path.exists(os.getcwd() + os.path.join("\\generatedruns")):
-    os.makedirs(os.getcwd() + os.path.join("\\generatedruns"))
+if not os.path.exists(os.getcwd() + os.path.join("\\grading_projects")):
+    os.makedirs(os.getcwd() + os.path.join("\\grading_projects"))
 
 app = Application()
 app.title("Digital Design Grading GUI")

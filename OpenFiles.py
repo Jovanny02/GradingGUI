@@ -6,82 +6,92 @@ import shutil
 
 
 def uploadTCLFile(self):
-    tf = filedialog.askopenfilename(
+    files = filedialog.askopenfilenames(
         initialdir=os.getcwd(),
-        title="Choose TCL file",
+        title="Choose TCL files",
         filetypes=(("TCL Files", "*.tcl"),)
     )
     try:
-        if tf == "":
-            self.tclUploadVar.set("")
-            return
-        tf = open(tf)  # or tf = open(tf, 'r')
+        for tf in files:
+            if tf == "":
+                self.textUploadVar.set("")
+                return
+            tf = open(tf)  # or tf = open(tf, 'r')
 
-        # copy file over to tcl locations
-        shutil.copy(tf.name, os.getcwd() + os.path.join("\\lab_tcl"))
-
-        # Generate an animation for the result
-        self.tclUploadVar.set("Uploaded " + tf.name[tf.name.rfind("/") + 1:len(tf.name)])
-        self.tclStatusLabel['fg'] = "#006400"
-
-        tf.close()
+            # copy file over to tcl locations
+            shutil.copy(tf.name, os.getcwd() + os.path.join("\\lab_tcl"))
+            tf.close()
     except:
-        tf.close()
-        self.tclUploadVar.set("An Error Occurred")
-        self.tclStatusLabel['fg'] = "red"
+        self.textUploadVar.set("An Error Occurred")
+        self.studentListLabel['fg'] = "red"
+
+    if len(files) == 1:
+        # Generate an animation for the result
+        self.textUploadVar.set("Uploaded " + files[0].name[files[0].name.rfind("/") + 1:len(files[0].name)])
+        self.studentListLabel['fg'] = "#006400"
+    elif len(files) > 1:
+        self.textUploadVar.set("Uploaded " + str(len(files)) + " Files")
+        self.studentListLabel['fg'] = "#006400"
 
 
 def uploadVHDFile(self):
-    tf = filedialog.askopenfilename(
+    files = filedialog.askopenfilenames(
         initialdir=os.getcwd(),
-        title="Choose VHD file",
+        title="Choose VHD files",
         filetypes=(("VHD Files", "*.vhd"),)
     )
     try:
-        if tf == "":
-            self.tbUploadVar.set("")
-            return
-        tf = open(tf)  # or tf = open(tf, 'r')
+        for tf in files:
+            if tf == "":
+                self.textUploadVar.set("")
+                return
+            tf = open(tf)  # or tf = open(tf, 'r')
 
-        # copy file over to tcl locations
-        shutil.copy(tf.name, os.getcwd() + os.path.join("\\testbenchces"))
-
-        # Generate an animation for the result
-        self.tbUploadVar.set("Uploaded " + tf.name[tf.name.rfind("/") + 1:len(tf.name)])
-        self.tbUploadLabel['fg'] = "#006400"
-        tf.close()
+            # copy file over to tcl locations
+            shutil.copy(tf.name, os.getcwd() + os.path.join("\\testbenchces"))
+            tf.close()
     except:
-        tf.close()
-        self.tbUploadVar.set("An Error Occurred")
-        self.tbUploadLabel['fg'] = "red"
+        self.textUploadVar.set("An Error Occurred")
+        self.studentListLabel['fg'] = "red"
+
+    if len(files) == 1:
+        # Generate an animation for the result
+        self.textUploadVar.set("Uploaded " + files[0].name[files[0].name.rfind("/") + 1:len(files[0].name)])
+        self.studentListLabel['fg'] = "#006400"
+    elif len(files) > 1:
+        self.textUploadVar.set("Uploaded " + str(len(files)) + " Files")
+        self.studentListLabel['fg'] = "#006400"
 
     refreshTBs(self)
 
 
 def uploadTextFile(self):
-    tf = filedialog.askopenfilename(
+    files = filedialog.askopenfilenames(
         initialdir=os.getcwd(),
-        title="Choose Text file",
+        title="Choose Text files",
         filetypes=(("Text Files", "*.txt"),)
     )
     try:
-        if tf == "":
-            self.textUploadVar.set("")
-            return
-        tf = open(tf)  # or tf = open(tf, 'r')
+        for tf in files:
+            if tf == "":
+                self.textUploadVar.set("")
+                return
+            tf = open(tf)  # or tf = open(tf, 'r')
 
-        # copy file over to tcl locations
-        shutil.copy(tf.name, os.getcwd() + os.path.join("\\studentlists"))
-
-        # Generate an animation for the result
-        self.textUploadVar.set("Uploaded " + tf.name[tf.name.rfind("/") + 1:len(tf.name)])
-        self.studentListLabel['fg'] = "#006400"
-        tf.close()
+            # copy file over to tcl locations
+            shutil.copy(tf.name, os.getcwd() + os.path.join("\\studentlists"))
+            tf.close()
     except:
-        tf.close()
         self.textUploadVar.set("An Error Occurred")
         self.studentListLabel['fg'] = "red"
 
+    if len(files) == 1:
+        # Generate an animation for the result
+        self.textUploadVar.set("Uploaded " + files[0].name[files[0].name.rfind("/") + 1:len(files[0].name)])
+        self.studentListLabel['fg'] = "#006400"
+    elif len(files) > 1:
+        self.textUploadVar.set("Uploaded " + str(len(files)) + " Files")
+        self.studentListLabel['fg'] = "#006400"
 
 def uploadZipFile(self):
     tf = filedialog.askopenfilename(

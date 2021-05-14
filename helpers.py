@@ -1,6 +1,6 @@
 import sys
 import threading
-import time
+import operator
 from tkinter import filedialog, END
 from concurrent.futures import *
 from zip_function import *
@@ -13,6 +13,7 @@ import os
 
 def generateRun(self):
     # Get variables from app
+    self.isGenerating = True
     selectedTCL = self.tclVar.get()
     selectedStudentList = self.studentListVar.get()
     chosenZip = self.zipVar.get()
@@ -21,20 +22,22 @@ def generateRun(self):
 
     # Error checking
     if selectedTCL == "" or selectedStudentList == "" or chosenZip == "" or generationName == "" or len(chosenTBs) == 0:
+        self.setIsGenerating(False)
         self.errorLabel['text'] = "Please Select All Fields"
         self.errorLabel['fg'] = "red"
         return
 
-    tclPath = os.getcwd() + os.path.join(f"\\generatedruns\\{generationName}\\tcl")
-    submissionsPath = os.getcwd() + os.path.join(f'''\\generatedruns\\{generationName}\\submissions''')
-    modelsimPath = os.getcwd() + os.path.join(f'''\\generatedruns\\{generationName}\\modelsim''')
+    tclPath = os.getcwd() + os.path.join(f"\\grading_projects\\{generationName}\\tcl")
+    submissionsPath = os.getcwd() + os.path.join(f'''\\grading_projects\\{generationName}\\submissions''')
+    modelsimPath = os.getcwd() + os.path.join(f'''\\grading_projects\\{generationName}\\modelsim''')
     # Create Directory For Run
-    if not os.path.exists(os.getcwd() + os.path.join(f"\\generatedruns\\{generationName}")):
-        os.makedirs(os.getcwd() + os.path.join(f"\\generatedruns\\{generationName}"))
+    if not os.path.exists(os.getcwd() + os.path.join(f"\\grading_projects\\{generationName}")):
+        os.makedirs(os.getcwd() + os.path.join(f"\\grading_projects\\{generationName}"))
         os.makedirs(modelsimPath)
         os.makedirs(tclPath)
         os.makedirs(submissionsPath)
     else:
+        self.setIsGenerating(False)
         self.errorLabel['text'] = "Name Already Exists"
         self.errorLabel['fg'] = "red"
         return
@@ -76,6 +79,7 @@ def generateRun(self):
     # refreshes runs
     loadRuns(self)
 
+    self.setIsGenerating(False)
     self.errorLabel['fg'] = "#006400"
     self.errorLabel['text'] = "Succesfully Generated"
     return
@@ -99,26 +103,26 @@ def clearWindowText(terminalScrolledText):
 
 
 def loadRuns(self):
-    root = (os.getcwd() + os.path.join(f"\\generatedruns")).replace(os.sep, "/")
+    root = (os.getcwd() + os.path.join(f"\\grading_projects")).replace(os.sep, "/")
     runs = [item for item in os.listdir(root) if os.path.isdir(os.path.join(root, item))]
-    self.runComboBox['values'] = runs
+    self.projectComboBox['values'] = runs
 
 
 def deleteRun(self):
-    if self.runComboBox.get() == "'Choose Grading Project'":
+    if self.projectComboBox.get() == "'Choose Grading Project'":
         return
 
-    shutil.rmtree(os.getcwd() + os.path.join(f"\\generatedruns\\{self.runComboBox.get()}"))
+    shutil.rmtree(os.getcwd() + os.path.join(f"\\grading_projects\\{self.projectComboBox.get()}"))
     loadRuns(self)
-    self.runComboBox.set('Choose Grading Project')
+    self.projectComboBox.set('Choose Grading Project')
 
 
 def loadStudents(self):
-    if self.runComboBox.get() == 'Choose Grading Project':
+    if self.projectComboBox.get() == 'Choose Grading Project':
         return
 
     self.studentComboBox.delete(0, self.tbListBox.size())
-    studentsDir = os.getcwd() + os.path.join(f"\\generatedruns\\{self.runComboBox.get()}\\tcl")
+    studentsDir = os.getcwd() + os.path.join(f"\\grading_projects\\{self.projectComboBox.get()}\\tcl")
     students = []
     try:
         for file in os.listdir(studentsDir):
@@ -127,13 +131,13 @@ def loadStudents(self):
     except:
         print("NO TESTBENCH FILES!")
 
-    self.currentProject = self.runComboBox.get()
+    self.currentProject = self.projectComboBox.get()
     self.studentComboBox['values'] = students
     self.studentComboBox.set('Choose Student')
     return
 
 
-def checkOutputLoop(text, process, student):
+def checkOutputLoop(text, process, student, statusLabel, getTimer, setRunning, setExitFlag):
     clearWindowText(text)
     tempData, err = process.communicate()
     for line in tempData.split("\n"):
@@ -144,14 +148,19 @@ def checkOutputLoop(text, process, student):
     text.configure(state='disabled')
     process.terminate()
     text.yview(END)
+    statusLabel.set(f'''Completed {student}. Time Elapsed: {getTimerText(getTimer(), operator.floordiv) }:{getTimerText(getTimer(), operator.mod)}''')
+    setRunning(False)
+    setExitFlag(False)
     sys.exit()
 
 
 def runStudent(self):
-    if self.studentComboBox.get() == 'Choose Student':
+    if self.studentComboBox.get() == 'Choose Student' or self.isRunning:
         return
+    # if a lock on the project exists, remove it
+    deleteModelsimLock(os.getcwd() + os.path.join(f"\\grading_projects\\{self.projectComboBox.get()}"))
 
-    studentDir = os.getcwd() + os.path.join(f"\\generatedruns\\{self.runComboBox.get()}\\tcl\\")
+    studentDir = os.getcwd() + os.path.join(f"\\grading_projects\\{self.projectComboBox.get()}\\tcl\\")
     studentDir += os.path.join(self.studentComboBox.get() + ".tcl")
     studentDir = studentDir.replace(os.sep, "/")
     if self.guiCheckBoxVal.get() == 1:
@@ -162,26 +171,29 @@ def runStudent(self):
         return
 
     try:
-        self.subProcess = Popen(cmd, stdout=PIPE, stdin=PIPE, stderr=STDOUT, text=True, universal_newlines=True)
-
-
+        self.assignSubprocess(cmd)
+        clearWindowText(self.terminalScrolledText)
+        self.clearTimer()
+        self.setIsRunning(True)
     except:
         print(''' Something didn't work... ¯\_(ツ)_/¯ ''')
+        self.setIsRunning(False)
 
-    # self.runThread = threading.Thread(target=checkOutputLoop, name="windowThread",
-    #                                   args=(self.terminalScrolledText, self.subProcess, self.studentComboBox.get()))
-    # self.runThread.daemon = True
-    # self.runThread.start()
-    with ThreadPoolExecutor() as executor:
-        self.runThread = executor.submit(checkOutputLoop, self.terminalScrolledText, self.subProcess,
-                                         self.studentComboBox.get())
 
+    self.currentStudent = self.studentComboBox.get()
+    self.runThread = threading.Thread(target=checkOutputLoop, name="windowThread",
+                                      args=(self.terminalScrolledText, self.subProcess, self.currentStudent,
+                                            self.windowStatusVar, self.getTimer, self.setIsRunning, self.setExitFlag))
+    self.runThread.daemon = True
+    self.runThread.start()
     return
 
 
 def runNextStudent(self):
     nextIndex = self.studentComboBox.current() + 1
-    if nextIndex >= len(self.studentComboBox["values"]):
+    if nextIndex >= len(self.studentComboBox["values"]) or nextIndex < 0:
+        return
+    if self.isRunning:
         return
 
     self.studentComboBox.current(nextIndex)
@@ -189,28 +201,40 @@ def runNextStudent(self):
 
 
 def runAllStudents(self):
+    # dont run if another process is running
+    if self.isRunning:
+        return
+
+    self.clearSubprocess()
     self.runALlThread = threading.Thread(target=runAllStudentsHelper, name="runAllThread",
                                          args=(self.terminalScrolledText, self.studentComboBox,
-                                               self.guiCheckBoxVal, self.currentProject, self.exitFlag))
+                                               self.guiCheckBoxVal, self.currentProject, self.getExitFlag,
+                                               self.setExitFlag, self.assignSubprocess, self.setCurrStudent,
+                                               self.clearTimer, self.getTimer, self.setIsRunning, self.windowStatusVar))
     self.runALlThread.daemon = True
     self.runALlThread.start()
     return
 
 
-def runAllStudentsHelper(text, studentComboBox, useGuiCheckBox, currProject, exitFlag):
+def runAllStudentsHelper(text, studentComboBox, useGuiCheckBox, currProject, getExitFlag, setExitFlag,
+                         subProcess, setCurrStudent, clearTimer, getTimer, setIsRunning, windowStatus):
     if currProject is None:
         return
-
-    projectDir = os.getcwd() + os.path.join(f"\\generatedruns\\{currProject}\\tcl\\")
-
+    deleteModelsimLock(os.getcwd() + os.path.join(f"\\grading_projects\\{currProject}"))
+    setIsRunning(True)
+    clearTimer()
+    projectDir = os.getcwd() + os.path.join(f"\\grading_projects\\{currProject}\\tcl\\")
+    clearWindowText(text)
     for x in range(studentComboBox.current(), len(studentComboBox["values"])):
         if x == -1:
             continue
 
-        if exitFlag:
+        if getExitFlag():
             break
+        clearTimer()
         # set current index
         studentComboBox.current(x)
+        setCurrStudent(studentComboBox.get())
         currStudent = studentComboBox.get()
         # get the files for each student
         currDir = projectDir + os.path.join(currStudent + ".tcl")
@@ -220,13 +244,12 @@ def runAllStudentsHelper(text, studentComboBox, useGuiCheckBox, currProject, exi
         else:
             cmd = f'''vsim -c -l "" -do "{os.path.abspath(currDir)}"'''
         try:
-            subProcess = Popen(cmd, stdout=PIPE, stdin=PIPE, stderr=STDOUT, text=True, universal_newlines=True)
+            process = subProcess(cmd)
         except:
             print(''' Something didn't work... ¯\_(ツ)_/¯ ''')
             continue
 
-        tempData, err = subProcess.communicate()
-        clearWindowText(text)
+        tempData, err = process.communicate()
         for line in tempData.split("\n"):
             text.configure(state='normal')
             text.insert(END, line + "\n")
@@ -234,11 +257,36 @@ def runAllStudentsHelper(text, studentComboBox, useGuiCheckBox, currProject, exi
         text.insert(END, f"Results for {currStudent}\n")
         text.configure(state='disabled')
         text.yview(END)
-        time.sleep(1)
 
     # kill thread
+    windowStatus.set(f'''Completed {studentComboBox.get()}. Time Elapsed: {getTimerText(getTimer(), operator.floordiv) }:{getTimerText(getTimer(), operator.mod)}''')
+    setExitFlag(False)
+    setIsRunning(False)
     sys.exit()
 
 
 def stopRunning(self):
-    exitFlag = True
+    if self.subProcess is None:
+        return
+    self.subProcess.terminate()
+    self.exitFlag = True
+    self.setIsRunning(False)
+
+def deleteModelsimLock(modelsimProjectDir):
+    path = os.path.abspath(modelsimProjectDir + os.path.join("\\modelsim\\work\\_lock"))
+    try:
+        if os.path.exists(path):
+            os.remove(path)
+    except:
+        print("Couldn't Delete _lock file")
+
+
+def getTimerText(timerVal, op):
+    value = op(timerVal, 60)
+    if value < 10:
+        return "0" + str(value)
+
+    return str(value)
+
+
+
