@@ -326,4 +326,28 @@ def getTimerText(timerVal, op):
     return str(value)
 
 
+def loadStudentResult(self):
+    if self.studentComboBox.get() == 'Choose Student' or self.isRunning:
+        return
+    try:
+        resultsDir = os.getcwd() + os.path.join(f"\\grading_projects\\{str(self.currentProject)}\\results\\")
+        studentDir = resultsDir + self.studentComboBox.get() + ".txt"
+        clearWindowText(self.terminalScrolledText)
+        if path.exists(studentDir):
+            f = open(studentDir, "r", encoding='utf-8')
+            lines = f.readlines()
+            f.close()
+            for line in lines:
+                self.terminalScrolledText.configure(state='normal')
+                self.terminalScrolledText.insert(END, line)
 
+            self.terminalScrolledText.insert(END, f"Results for {self.studentComboBox.get()}\n")
+            self.terminalScrolledText.configure(state='disabled')
+        else:
+            self.terminalScrolledText.configure(state='normal')
+            self.terminalScrolledText.insert(END, f"No previous results for {self.studentComboBox.get()}\n")
+            self.terminalScrolledText.configure(state='disabled')
+
+        self.terminalScrolledText.yview(END)
+    except:
+        print("error reading file")

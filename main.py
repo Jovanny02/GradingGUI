@@ -8,8 +8,6 @@ from tkinter.ttk import Combobox, Style
 from OpenFiles import *
 from functools import partial
 from helpers import *
-from signal import SIGTERM
-from os import *
 
 __author__ = "Jovanny Vera"
 
@@ -194,9 +192,9 @@ class Application(Tk):
 
     def createRunProjectFrame(self):
         runFrame = ttk.Frame(self.rightFrame, borderwidth=1, relief='solid') # highlightthickness=1, highlightbackground="black")
-        runFrame.grid(row=0, column=0, sticky="NSEW", padx=5, pady=5)
+        runFrame.grid(row=0, column=0, columnspan=2, sticky="NSEW", padx=5, pady=5)
 
-        runTitle =ttk.Label(runFrame, text="Run Grading Project", font=("TkDefaultFont", 18))
+        runTitle =ttk.Label(runFrame, text="Load Grading Project", font=("TkDefaultFont", 18))
         runTitle.grid(row=0, column=0, columnspan=2, padx=5, pady=(5, 0), sticky=W)
 
         # Title sep
@@ -210,41 +208,44 @@ class Application(Tk):
         loadButton = ttk.Button(runFrame, text="Load Project", style='AccentButton',command=partial(loadStudents, self))
         loadButton.grid(row=2, column=1, sticky="NSEW", padx=5, pady=5)
 
-        deleteButton =ttk.Button(runFrame, text="Delete", style='AccentButton', command=partial(deleteProject, self))
+        deleteButton =ttk.Button(runFrame, text="Delete Project", style='AccentButton', command=partial(deleteProject, self))
         deleteButton.grid(row=2, column=2, sticky="NSEW", padx=5, pady=5)
 
         self.themeVar = IntVar()
         self.themeCheckBox = ttk.Checkbutton(runFrame, variable=self.themeVar, style='Switch',
                                                    text="Dark Mode", command=self.toggleTheme)
-        self.themeCheckBox.grid(row=2, column=7, sticky="NSEW", padx=5, pady=5)
+        self.themeCheckBox.grid(row=2, column=3, sticky="W", padx=5, pady=5)
 
         # select student comboBox
         self.studentComboBox = Combobox(runFrame)
         self.studentComboBox.grid(row=3, column=0, sticky="NSEW", padx=5, pady=5)
         self.studentComboBox.set('Choose Student')
-        runButton = ttk.Button(runFrame, style='AccentButton', text="Run", command=partial(runStudent, self))
-        runButton.grid(row=3, column=1, sticky="NSEW", padx=5, pady=5)
+        # runButton = ttk.Button(runFrame, style='AccentButton', text="Run", command=partial(runStudent, self))
+        # runButton.grid(row=3, column=1, sticky="NSEW", padx=5, pady=5)
 
-        runButton = ttk.Button(runFrame, style='AccentButton', text="Run Next", command=partial(runNextStudent, self))
-        runButton.grid(row=3, column=2, sticky="NSEW", padx=5, pady=5)
+        loadButton = ttk.Button(runFrame, style='AccentButton', text="Load Previous Result", command=partial(loadStudentResult, self))
+        loadButton.grid(row=3, column=1, columnspan=2, sticky="NSW", padx=5, pady=5)
 
-        runButton = ttk.Button(runFrame, style='AccentButton', text="Run All", command=partial(runAllStudents, self))
-        runButton.grid(row=3, column=3, sticky="NSEW", padx=5, pady=5)
+        # runButton = ttk.Button(runFrame, style='AccentButton', text="Run Next", command=partial(runNextStudent, self))
+        # runButton.grid(row=3, column=2, sticky="NSEW", padx=5, pady=5)
 
-        clearWindowButton = ttk.Button(runFrame, style='AccentButton', text="Clear Window", command=partial(clearWindowText, self.terminalScrolledText))
-        clearWindowButton.grid(row=3, column=4, sticky="NSEW", padx=5, pady=5)
-
-        quitWindowButton = ttk.Button(runFrame, style='AccentButton', text="Stop", command=partial(stopRunning, self))
-        quitWindowButton.grid(row=3, column=5, sticky="NSEW", padx=5, pady=5)
-
-        self.guiCheckBoxVal = IntVar()
-        self.guiCheckBox = ttk.Checkbutton(runFrame, variable=self.guiCheckBoxVal, style='Switch', text="gui")
-        self.guiCheckBox.grid(row=3, column=6, sticky="NSEW", padx=5, pady=5)
-
-        self.parseOutputVar = IntVar()
-        self.parseOutputCheckBox = ttk.Checkbutton(runFrame, variable=self.parseOutputVar, style='Switch',
-                                                   text="Result Only")
-        self.parseOutputCheckBox.grid(row=3, column=7, sticky="NSEW", padx=5, pady=5)
+        # runButton = ttk.Button(runFrame, style='AccentButton', text="Run All", command=partial(runAllStudents, self))
+        # runButton.grid(row=3, column=3, sticky="NSEW", padx=5, pady=5)
+        #
+        # clearWindowButton = ttk.Button(runFrame, style='AccentButton', text="Clear Window", command=partial(clearWindowText, self.terminalScrolledText))
+        # clearWindowButton.grid(row=3, column=4, sticky="NSEW", padx=5, pady=5)
+        #
+        # quitWindowButton = ttk.Button(runFrame, style='AccentButton', text="Stop", command=partial(stopRunning, self))
+        # quitWindowButton.grid(row=3, column=5, sticky="NSEW", padx=5, pady=5)
+        #
+        # self.guiCheckBoxVal = IntVar()
+        # self.guiCheckBox = ttk.Checkbutton(runFrame, variable=self.guiCheckBoxVal, style='Switch', text="gui")
+        # self.guiCheckBox.grid(row=3, column=6, sticky="NSEW", padx=5, pady=5)
+        #
+        # self.parseOutputVar = IntVar()
+        # self.parseOutputCheckBox = ttk.Checkbutton(runFrame, variable=self.parseOutputVar, style='Switch',
+        #                                            text="Result Only")
+        # self.parseOutputCheckBox.grid(row=3, column=7, sticky="NSEW", padx=5, pady=5)
         return
 
     def createScrollWindow(self):
@@ -252,14 +253,42 @@ class Application(Tk):
         terminalWindowFrame = ttk.Frame(self.rightFrame, borderwidth=1, relief='solid') # highlightthickness=1, highlightbackground="black")
         terminalWindowFrame.grid(row=1, column=0, sticky="NSEW", padx=5, pady=5)
 
+
+        self.terminalScrolledText = ScrolledText(terminalWindowFrame, highlightthickness=1, highlightbackground="black")
+        self.terminalScrolledText.pack(side=TOP, fill=BOTH, expand=TRUE)
+        self.terminalScrolledText.configure(state='disabled')
+
         self.windowStatusVar = StringVar(terminalWindowFrame)
         windowStatusLabel = ttk.Label(terminalWindowFrame, textvariable=self.windowStatusVar)
         windowStatusLabel.pack(side=BOTTOM)
 
-        self.terminalScrolledText = ScrolledText(terminalWindowFrame, highlightthickness=1, highlightbackground="black")
-        self.terminalScrolledText.pack(side=LEFT, fill=BOTH, expand=TRUE)
-        self.terminalScrolledText.configure(state='disabled')
+        # Terminal controls
+        terminalControlFrame = ttk.Frame(self.rightFrame, borderwidth=1, relief='solid') # highlightthickness=1, highlightbackground="black")
+        terminalControlFrame.grid(row=2, column=0, sticky="NSEW", padx=5, pady=5)
 
+        runButton = ttk.Button(terminalControlFrame, style='AccentButton', text="Run", command=partial(runStudent, self))
+        runButton.pack(side=LEFT, fill=BOTH, padx=5, pady=5)
+
+        runNextButton = ttk.Button(terminalControlFrame, style='AccentButton', text="Run Next", command=partial(runNextStudent, self))
+        runNextButton.pack(side=LEFT, fill=BOTH, padx=5, pady=5)
+
+        runAllButton = ttk.Button(terminalControlFrame, style='AccentButton', text="Run All", command=partial(runAllStudents, self))
+        runAllButton.pack(side=LEFT, fill=BOTH, padx=5, pady=5)
+
+        clearWindowButton = ttk.Button(terminalControlFrame, style='AccentButton', text="Clear Window", command=partial(clearWindowText, self.terminalScrolledText))
+        clearWindowButton.pack(side=LEFT, fill=BOTH, padx=5, pady=5)
+
+        quitWindowButton = ttk.Button(terminalControlFrame, style='AccentButton', text="Stop", command=partial(stopRunning, self))
+        quitWindowButton.pack(side=LEFT, fill=BOTH, padx=5, pady=5)
+
+        self.guiCheckBoxVal = IntVar()
+        self.guiCheckBox = ttk.Checkbutton(terminalControlFrame, variable=self.guiCheckBoxVal, style='Switch', text="gui")
+        self.guiCheckBox.pack(side=LEFT, fill=BOTH, padx=5, pady=5)
+
+        self.parseOutputVar = IntVar()
+        self.parseOutputCheckBox = ttk.Checkbutton(terminalControlFrame, variable=self.parseOutputVar, style='Switch',
+                                                   text="Result Only")
+        self.parseOutputCheckBox.pack(side=LEFT, fill=BOTH, padx=5, pady=5)
 
 
     def clearSubprocess(self):

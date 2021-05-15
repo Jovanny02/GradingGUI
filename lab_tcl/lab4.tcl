@@ -1,9 +1,3 @@
-proc pause {{message "\nHit Enter to continue ==> "}} {
-    puts -nonewline $message
-    flush stdout
-    gets stdin
-}
-
 
 try {
     vsim -c -quiet work.clk_gen_true_testbench
