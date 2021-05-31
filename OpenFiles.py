@@ -14,7 +14,7 @@ def uploadTCLFile(self):
     try:
         for tf in files:
             if tf == "":
-                self.textUploadVar.set("")
+                self.tclUploadVar.set("")
                 return
             tf = open(tf)  # or tf = open(tf, 'r')
 
@@ -22,17 +22,20 @@ def uploadTCLFile(self):
             shutil.copy(tf.name, os.getcwd() + os.path.join("\\lab_tcl"))
             tf.close()
     except:
-        self.textUploadVar.set("An Error Occurred")
-        self.studentListLabel['fg'] = "red"
+        self.tclStatusLabel.configure(style="Red.TLabel")
+        self.tclUploadVar.set("An Error Occurred")
+        return
 
     if len(files) == 1:
         # Generate an animation for the result
-        self.textUploadVar.set("Uploaded " + files[0][files[0].rfind("/") + 1:len(files[0])])
-        self.studentListLabel['fg'] = "#006400"
+        self.tclStatusLabel.configure(style="Green.TLabel")
+        self.tclUploadVar.set("Uploaded " + files[0][files[0].rfind("/") + 1:len(files[0])])
     elif len(files) > 1:
-        self.textUploadVar.set("Uploaded " + str(len(files)) + " Files")
-        self.studentListLabel['fg'] = "#006400"
-
+        self.tclStatusLabel.configure(style="Green.TLabel")
+        self.tclUploadVar.set("Uploaded " + str(len(files)) + " Files")
+    elif len(files) == 0:
+        self.tclStatusLabel.configure(style="TLabel")
+        self.tclUploadVar.set("")
 
 def uploadVHDFile(self):
     files = filedialog.askopenfilenames(
@@ -43,7 +46,7 @@ def uploadVHDFile(self):
     try:
         for tf in files:
             if tf == "":
-                self.textUploadVar.set("")
+                self.tbUploadVar.set("")
                 return
             tf = open(tf)  # or tf = open(tf, 'r')
 
@@ -56,16 +59,21 @@ def uploadVHDFile(self):
 
             tf.close()
     except:
-        self.textUploadVar.set("An Error Occurred")
-        self.studentListLabel['fg'] = "red"
+        self.tbUploadLabel.configure(style="Red.TLabel")
+        self.tbUploadVar.set("An Error Occurred")
+        return
 
     if len(files) == 1:
         # Generate an animation for the result
-        self.textUploadVar.set("Uploaded " + files[0][files[0].rfind("/") + 1:len(files[0])])
-        self.studentListLabel['fg'] = "#006400"
+        self.tbUploadLabel.configure(style="Green.TLabel")
+        self.tbUploadVar.set("Uploaded " + files[0][files[0].rfind("/") + 1:len(files[0])])
+
     elif len(files) > 1:
-        self.textUploadVar.set("Uploaded " + str(len(files)) + " Files")
-        self.studentListLabel['fg'] = "#006400"
+        self.tbUploadLabel.configure(style="Green.TLabel")
+        self.tbUploadVar.set("Uploaded " + str(len(files)) + " Files")
+    elif len(files) == 0:
+        self.tbUploadLabel.configure(style="TLabel")
+        self.tbUploadVar.set("")
 
     refreshTBs(self)
 
@@ -87,16 +95,21 @@ def uploadTextFile(self):
             shutil.copy(tf.name, os.getcwd() + os.path.join("\\studentlists"))
             tf.close()
     except:
+        self.studentListLabel.configure(style="Red.TLabel")
         self.textUploadVar.set("An Error Occurred")
-        self.studentListLabel['fg'] = "red"
+        return
 
     if len(files) == 1:
         # Generate an animation for the result
+        self.studentListLabel.configure(style="Green.TLabel")
         self.textUploadVar.set("Uploaded " + files[0][files[0].rfind("/") + 1:len(files[0])])
-        self.studentListLabel['fg'] = "#006400"
     elif len(files) > 1:
+        self.studentListLabel.configure(style="Green.TLabel")
         self.textUploadVar.set("Uploaded " + str(len(files)) + " Files")
-        self.studentListLabel['fg'] = "#006400"
+    elif len(files) == 0:
+        self.studentListLabel.configure(style="TLabel")
+        self.textUploadVar.set("")
+
 
 def uploadZipFile(self):
     tf = filedialog.askopenfilename(

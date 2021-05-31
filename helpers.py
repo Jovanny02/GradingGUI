@@ -1,18 +1,17 @@
 import sys
 import threading
 import operator
-from tkinter import filedialog, END
+from tkinter import END, ttk
 from zip_function import *
-import subprocess
-from subprocess import DEVNULL, PIPE, Popen, STDOUT
 from sim_function import compile_modelsim
+from collections import deque
 
 import os
 
 
 def generateRun(self):
     # Get variables from app
-    self.isGenerating = True
+    self.setIsGenerating(True)
     selectedTCL = self.tclVar.get()
     selectedStudentList = self.studentListVar.get()
     chosenZip = self.zipVar.get()
@@ -59,15 +58,19 @@ def generateRun(self):
         createProjectCommand += '\nproject addfile "' + \
                                 (os.getcwd() + os.path.join(f"/testbenchces/{temp}")).replace(os.sep, '/') + '"'
     createProjectCommand += "\nquit\n"
-
-    # temp tcl file to read from to make do command easier
-    f = open("createProject.tcl", "w", encoding='utf-8')
-    f.write(createProjectCommand)
-    f.close()
-    # run commands
-    cmd = f'''vsim -c -l "" -do "{os.path.abspath("createProject.tcl")}"'''
-    subprocess.run(cmd, shell=True, stdout=True, stderr=DEVNULL)
-
+    try:
+        # temp tcl file to read from to make do command easier
+        f = open("createProject.tcl", "w", encoding='utf-8')
+        f.write(createProjectCommand)
+        f.close()
+        # run commands
+        cmd = f'''vsim -c -l "" -do "{os.path.abspath("createProject.tcl")}"'''
+        subprocess = self.assignSubprocess(cmd)
+        subprocess.wait()  # wait for subproces to finish
+    except:
+        self.setIsGenerating(False)
+        self.errorLabel['fg'] = "red"
+        self.errorLabel['text'] = "Error Creating Modelsim Project"
     # remove temp file
     try:
         os.remove("createProject.tcl")
@@ -351,3 +354,26 @@ def loadStudentResult(self):
         self.terminalScrolledText.yview(END)
     except:
         print("error reading file")
+
+def changeFont(self):
+    queue = deque()
+    queue.append(self)
+    labelfont = ('TkDefaultFont 9')
+    ttk.Style().configure("TButton", padding=6, relief="flat",
+                          background="#ccc")
+    while len(queue) > 0:
+        curr = queue.pop()
+        for child in curr.winfo_children():
+            queue.append(child)
+
+        try:
+            curr.config(font=labelfont)
+        except:
+            print("could not increase font size of " + str(curr))
+            continue
+
+
+    # print(self.terminalScrolledText.tk)
+    # labelfont = ('TkDefaultFont', 20, 'bold')
+    # self.terminalScrolledText.config(font=labelfont)
+    return

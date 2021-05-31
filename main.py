@@ -1,10 +1,10 @@
-import functools
-import signal
 from tkinter import *
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
 from tkinter.ttk import Combobox, Style
 
+import subprocess
+from subprocess import PIPE, Popen, STDOUT
 from OpenFiles import *
 from functools import partial
 from helpers import *
@@ -49,6 +49,11 @@ class Application(Tk):
         self.createRunProjectFrame()
         # Load Runs
         loadProjects(self)
+
+        style = ttk.Style()
+        style.configure("Red.TLabel", foreground="red")
+        style2 = ttk.Style()
+        style2.configure("Green.TLabel", foreground="green")
         self.updateTimer()
 
     def createLayout(self):
@@ -91,12 +96,14 @@ class Application(Tk):
 
         # TCL upload
         self.tclUploadVar = StringVar(self.uploadFileFrame)
-        tclLabel =ttk.Label(self.uploadFileFrame, text="TCL Files: ").grid(row=2, column=0, sticky=W)
+        tclLabel =ttk.Label(self.uploadFileFrame, text="TCL Files: ")
+        tclLabel.grid(row=2, column=0, sticky=W)
         self.tclStatusLabel =ttk.Label(self.uploadFileFrame, textvariable=self.tclUploadVar)
         self.tclStatusLabel.grid(row=2, column=2, sticky=W)
         tclButton = ttk.Button(self.uploadFileFrame, text="Select Files", style='AccentButton',
                            command=partial(uploadTCLFile, self))
         tclButton.grid(row=2, column=1, sticky=W, padx=5, pady=5)
+
 
         # Testbench upload
         self.tbUploadVar = StringVar(self.uploadFileFrame)
@@ -202,7 +209,7 @@ class Application(Tk):
         sep.grid(row=1, column=0, columnspan=2, padx=5, pady=(0, 5), sticky='NEW')
 
         # select run comboBox and button
-        self.projectComboBox = Combobox(runFrame)
+        self.projectComboBox = Combobox(runFrame, state='readonly')
         self.projectComboBox.grid(row=2, column=0, sticky="NSEW", padx=5, pady=5)
         self.projectComboBox.set('Choose Grading Project')
         loadButton = ttk.Button(runFrame, text="Load Project", style='AccentButton',command=partial(loadStudents, self))
@@ -217,35 +224,13 @@ class Application(Tk):
         self.themeCheckBox.grid(row=2, column=3, sticky="W", padx=5, pady=5)
 
         # select student comboBox
-        self.studentComboBox = Combobox(runFrame)
+        self.studentComboBox = Combobox(runFrame, state='readonly')
         self.studentComboBox.grid(row=3, column=0, sticky="NSEW", padx=5, pady=5)
         self.studentComboBox.set('Choose Student')
-        # runButton = ttk.Button(runFrame, style='AccentButton', text="Run", command=partial(runStudent, self))
-        # runButton.grid(row=3, column=1, sticky="NSEW", padx=5, pady=5)
 
         loadButton = ttk.Button(runFrame, style='AccentButton', text="Load Previous Result", command=partial(loadStudentResult, self))
         loadButton.grid(row=3, column=1, columnspan=2, sticky="NSW", padx=5, pady=5)
 
-        # runButton = ttk.Button(runFrame, style='AccentButton', text="Run Next", command=partial(runNextStudent, self))
-        # runButton.grid(row=3, column=2, sticky="NSEW", padx=5, pady=5)
-
-        # runButton = ttk.Button(runFrame, style='AccentButton', text="Run All", command=partial(runAllStudents, self))
-        # runButton.grid(row=3, column=3, sticky="NSEW", padx=5, pady=5)
-        #
-        # clearWindowButton = ttk.Button(runFrame, style='AccentButton', text="Clear Window", command=partial(clearWindowText, self.terminalScrolledText))
-        # clearWindowButton.grid(row=3, column=4, sticky="NSEW", padx=5, pady=5)
-        #
-        # quitWindowButton = ttk.Button(runFrame, style='AccentButton', text="Stop", command=partial(stopRunning, self))
-        # quitWindowButton.grid(row=3, column=5, sticky="NSEW", padx=5, pady=5)
-        #
-        # self.guiCheckBoxVal = IntVar()
-        # self.guiCheckBox = ttk.Checkbutton(runFrame, variable=self.guiCheckBoxVal, style='Switch', text="gui")
-        # self.guiCheckBox.grid(row=3, column=6, sticky="NSEW", padx=5, pady=5)
-        #
-        # self.parseOutputVar = IntVar()
-        # self.parseOutputCheckBox = ttk.Checkbutton(runFrame, variable=self.parseOutputVar, style='Switch',
-        #                                            text="Result Only")
-        # self.parseOutputCheckBox.grid(row=3, column=7, sticky="NSEW", padx=5, pady=5)
         return
 
     def createScrollWindow(self):
@@ -290,13 +275,16 @@ class Application(Tk):
                                                    text="Result Only")
         self.parseOutputCheckBox.pack(side=LEFT, fill=BOTH, padx=5, pady=5)
 
+        self.debug = ttk.Button(terminalControlFrame, style='AccentButton', text="debug", command=partial(changeFont, self))
+        self.debug.pack(side=LEFT, fill=BOTH, padx=5, pady=5)
+
 
     def clearSubprocess(self):
         self.subProcess = None
 
     def assignSubprocess(self, cmd):
         self.subProcess = None
-        self.subProcess = Popen(cmd, stdout=PIPE, stdin=PIPE, stderr=STDOUT, text=True, universal_newlines=True)
+        self.subProcess = Popen(cmd, stdout=PIPE, stdin=PIPE, stderr=STDOUT, text=True, universal_newlines=True, creationflags = subprocess.CREATE_NO_WINDOW)
         return self.subProcess
 
     def setCurrStudent(self, student):
