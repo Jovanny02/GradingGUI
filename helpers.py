@@ -4,18 +4,16 @@ import operator
 from tkinter import END, ttk
 from zip_function import *
 from sim_function import compile_modelsim
-from collections import deque
-
 import os
 
 
-def generateRun(self):
+def generateProject(self):
     # Get variables from app
     self.setIsGenerating(True)
     selectedTCL = self.tclVar.get()
     selectedStudentList = self.studentListVar.get()
     chosenZip = self.zipVar.get()
-    chosenTBs = self.tbListBox.curselection()
+    chosenTBs = self.selectedTestbenches
     generationName = self.generationEntry.get().replace(" ", "")
 
     # Error checking
@@ -53,10 +51,10 @@ def generateRun(self):
     createProjectCommand = f'''project new "{modelsimPath}" {generationName}'''
     createProjectCommand = createProjectCommand.replace(os.sep, "/")
     # add testbench files
-    for index in chosenTBs:
-        temp = self.tbListBox.get(index)
-        createProjectCommand += '\nproject addfile "' + \
-                                (os.getcwd() + os.path.join(f"/testbenchces/{temp}")).replace(os.sep, '/') + '"'
+    for file in chosenTBs:
+        createProjectCommand += '\nproject addfile "' + file.replace(os.sep, '/') + '"'
+                                # (os.getcwd() + os.path.join(f"/testbenchces/{temp}")).replace(os.sep, '/') + '"'
+
     createProjectCommand += "\nquit\n"
     try:
         # temp tcl file to read from to make do command easier
@@ -90,17 +88,6 @@ def generateRun(self):
     return
 
 
-def refreshTBs(self):
-    self.tbListBox.delete(0, self.tbListBox.size())
-    tbDir = os.getcwd() + os.path.join("\\testbenchces")
-    try:
-        for file in os.listdir(tbDir):
-            if file.endswith(".vhd"):
-                self.tbListBox.insert(self.tbListBox.size(), file)
-    except:
-        print("NO TESTBENCH FILES!")
-
-
 def clearWindowText(terminalScrolledText):
     terminalScrolledText.configure(state='normal')
     terminalScrolledText.delete('1.0', END)
@@ -126,7 +113,7 @@ def loadStudents(self):
     if self.projectComboBox.get() == 'Choose Grading Project':
         return
 
-    self.studentComboBox.delete(0, self.tbListBox.size())
+    self.studentComboBox['values'] = []
     studentsDir = os.getcwd() + os.path.join(f"\\grading_projects\\{self.projectComboBox.get()}\\tcl")
     students = []
     try:
@@ -155,8 +142,10 @@ def checkOutputLoop(text, process, student, resultsDirectory, statusLabel, getTi
 
     # write data to terminal
     text.configure(state='normal')
+    text.insert(END, f"Starting results for {student}\n")
     text.insert(END, tempData + "\n")
-    text.insert(END, f"Results for {student}\n")
+    text.insert(END, f"Ending results for {student}\n")
+    text.insert(END, "--------------------------------------------------------------------------------------------\n")
     text.configure(state='disabled')
     # write data to results file
     try:
@@ -284,8 +273,10 @@ def runAllStudentsHelper(text, studentComboBox, useGuiCheckBox, currProject, get
                 tempData = tempData[index:len(tempData)]
 
         text.configure(state='normal')
+        text.insert(END, f"Starting results for {currStudent}\n")
         text.insert(END, tempData + "\n")
-        text.insert(END, f"Results for {currStudent}\n")
+        text.insert(END, f"Ending results for {currStudent}\n")
+        text.insert(END, "--------------------------------------------------------------------------------------------\n")
         text.configure(state='disabled')
 
         # write to file
@@ -336,7 +327,7 @@ def loadStudentResult(self):
         resultsDir = os.getcwd() + os.path.join(f"\\grading_projects\\{str(self.currentProject)}\\results\\")
         studentDir = resultsDir + self.studentComboBox.get() + ".txt"
         clearWindowText(self.terminalScrolledText)
-        if path.exists(studentDir):
+        if os.path.exists(studentDir):
             f = open(studentDir, "r", encoding='utf-8')
             lines = f.readlines()
             f.close()
@@ -352,28 +343,29 @@ def loadStudentResult(self):
             self.terminalScrolledText.configure(state='disabled')
 
         self.terminalScrolledText.yview(END)
+        self.windowStatusVar.set(f'''Loaded Results For {self.studentComboBox.get()}''')
+
     except:
-        print("error reading file")
-
-def changeFont(self):
-    queue = deque()
-    queue.append(self)
-    labelfont = ('TkDefaultFont 9')
-    ttk.Style().configure("TButton", padding=6, relief="flat",
-                          background="#ccc")
-    while len(queue) > 0:
-        curr = queue.pop()
-        for child in curr.winfo_children():
-            queue.append(child)
-
-        try:
-            curr.config(font=labelfont)
-        except:
-            print("could not increase font size of " + str(curr))
-            continue
+        self.windowStatusVar.set("error reading file")
 
 
-    # print(self.terminalScrolledText.tk)
-    # labelfont = ('TkDefaultFont', 20, 'bold')
-    # self.terminalScrolledText.config(font=labelfont)
-    return
+def changeTerminalFont(terminalLabel,terminalWindow,  fontChange):
+    font = terminalWindow['font'].split(' ')
+    fontSize = 10
+    if(len(font) > 1):
+        fontSize = int(font[1]) + fontChange
+        if fontSize < 1:
+            fontSize = 1
+
+    labelfont = ('TkDefaultFont', fontSize)
+    terminalWindow.config(font=labelfont)
+    terminalLabel.config(font=labelfont)
+
+
+def changeComboBox(comboBox, amnt, self):
+    nextIndex = comboBox.current() + amnt
+    if nextIndex >= len(comboBox["values"]) or nextIndex < 0:
+        return
+
+    comboBox.current(nextIndex)
+    loadStudentResult(self)

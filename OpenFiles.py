@@ -1,6 +1,5 @@
 from tkinter import filedialog
 from pathlib import Path
-from helpers import refreshTBs
 import os
 import shutil
 
@@ -29,10 +28,10 @@ def uploadTCLFile(self):
     if len(files) == 1:
         # Generate an animation for the result
         self.tclStatusLabel.configure(style="Green.TLabel")
-        self.tclUploadVar.set("Uploaded " + files[0][files[0].rfind("/") + 1:len(files[0])])
+        self.tclUploadVar.set("Copied " + files[0][files[0].rfind("/") + 1:len(files[0])])
     elif len(files) > 1:
         self.tclStatusLabel.configure(style="Green.TLabel")
-        self.tclUploadVar.set("Uploaded " + str(len(files)) + " Files")
+        self.tclUploadVar.set("Copied " + str(len(files)) + " Files")
     elif len(files) == 0:
         self.tclStatusLabel.configure(style="TLabel")
         self.tclUploadVar.set("")
@@ -53,9 +52,9 @@ def uploadVHDFile(self):
             filename = tf.name[tf.name.rfind("/") + 1:len(tf.name)]
             # copy file over to tcl locations
             if filename.endswith("true_testbench.vhd"):
-                shutil.copy(tf.name, os.getcwd() + os.path.join("\\testbenchces"))
+                shutil.copy(tf.name, os.getcwd() + os.path.join("\\testbenches"))
             else:
-                shutil.copy(tf.name, os.getcwd() + os.path.join(f'''\\testbenchces\\{filename[0:len(filename)-4]}_true_testbench.vhd''' ))
+                shutil.copy(tf.name, os.getcwd() + os.path.join(f'''\\testbenches\\{filename[0:len(filename)-4]}_true_testbench.vhd''' ))
 
             tf.close()
     except:
@@ -66,16 +65,14 @@ def uploadVHDFile(self):
     if len(files) == 1:
         # Generate an animation for the result
         self.tbUploadLabel.configure(style="Green.TLabel")
-        self.tbUploadVar.set("Uploaded " + files[0][files[0].rfind("/") + 1:len(files[0])])
+        self.tbUploadVar.set("Copied " + files[0][files[0].rfind("/") + 1:len(files[0])])
 
     elif len(files) > 1:
         self.tbUploadLabel.configure(style="Green.TLabel")
-        self.tbUploadVar.set("Uploaded " + str(len(files)) + " Files")
+        self.tbUploadVar.set("Copied " + str(len(files)) + " Files")
     elif len(files) == 0:
         self.tbUploadLabel.configure(style="TLabel")
         self.tbUploadVar.set("")
-
-    refreshTBs(self)
 
 
 def uploadTextFile(self):
@@ -102,10 +99,10 @@ def uploadTextFile(self):
     if len(files) == 1:
         # Generate an animation for the result
         self.studentListLabel.configure(style="Green.TLabel")
-        self.textUploadVar.set("Uploaded " + files[0][files[0].rfind("/") + 1:len(files[0])])
+        self.textUploadVar.set("Copied " + files[0][files[0].rfind("/") + 1:len(files[0])])
     elif len(files) > 1:
         self.studentListLabel.configure(style="Green.TLabel")
-        self.textUploadVar.set("Uploaded " + str(len(files)) + " Files")
+        self.textUploadVar.set("Copied " + str(len(files)) + " Files")
     elif len(files) == 0:
         self.studentListLabel.configure(style="TLabel")
         self.textUploadVar.set("")
@@ -163,3 +160,26 @@ def openStudentListFile(self):
     self.studentListVar.set(tf.name)
     self.chooseStudentsLabel['text'] = tf.name[tf.name.rfind("/") + 1:len(tf.name)]
     tf.close()
+
+def chooseVHDFiles(self):
+    files = filedialog.askopenfilenames(
+        initialdir=os.getcwd() + '\\testbenches\\',
+        title="Choose VHD files",
+        filetypes=(("VHD Files", "*.vhd"),)
+    )
+    labelText = ""
+    self.selectedTestbenches = []
+    try:
+        for tf in files:
+            if tf == "":
+                self.tbUploadVar.set("")
+                return
+            tf = open(tf)  # or tf = open(tf, 'r')
+            self.selectedTestbenches.append(tf.name)
+            labelText += tf.name[tf.name.rfind("/") + 1:len(tf.name)] + '\n'
+            tf.close()
+    except:
+        self.tbSelectLabel['text'] = 'An Error Occured'
+        return
+
+    self.tbSelectLabel['text'] = labelText

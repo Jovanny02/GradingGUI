@@ -5,8 +5,6 @@ import os
 import zipfile
 import shutil
 import pathlib
-from shutil import copyfile
-from os import path
 from pathlib import Path
 from zipfile import ZipFile
 
