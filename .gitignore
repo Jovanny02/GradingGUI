@@ -1,6 +1,7 @@
 generatedruns/
 scripts/
 venv/
-studentlists/
+studentlists/monday_lab.txt
+studentlists/tuesday_lab.txt
 testbenchces/
 Modelsim_tb 21/
