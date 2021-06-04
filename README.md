@@ -1,4 +1,4 @@
-# Digital Design Grading GUI <img src="./images/integrated-circuit.ico" width="50">
+# Digital Design Grading GUI <img src="./images/integrated-circuit.ico" width="50" align="center">
 
 ## Purpose
 The purpose of this project is to make grading much easier for Digital Design TAs. This project combines the python 
