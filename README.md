@@ -6,7 +6,7 @@ auto grading scripts written by Keeth Smith with a simple UI that lets TAs creat
 their student submissions, and easily retrieve previous grading results. 
 ## How to Install
 * From Github Repo - Clone the Github repository and run the main.py file
-* From Installer - Download the installer from the Dropbox link below. Run the installer (You may need to disable your 
+* From Installer - Download the installer from the Dropbox link below OR download the installer exe file from the git repo. Run the installer (You may need to disable your 
   antivirus software to install this. Avast gave me all sorts of trouble with this, including installing properly but 
   not letting the program run properly afterwards). After you install, I recommend making a shortcut on your desktop.
 * Installer Download - https://www.dropbox.com/s/6hrnajr132ixxn6/Grading_gui_installer.exe?dl=0
